@@ -1,6 +1,6 @@
 # Začínáme s agenty: zdrojové soubory
 
-Agent pro Gmail a Disk Google, který si obyčejný člověk s účtem gmail.com zkopíruje do svého Google účtu. Běží jen tam, bez serveru, bez třetí strany, bez registrace. V provozu stojí nula korun (bezplatný tarif Gemini API), případně jednotky korun měsíčně, pokud chcete soukromí.
+Agent pro Gmail a Disk Google, který si obyčejný člověk s účtem gmail.com zkopíruje do svého Google účtu. Běží jen tam, bez serveru, bez třetí strany, bez registrace. V provozu stojí nula korun (bezplatný tarif Gemini API), případně jednotky korun měsíčně na placeném tarifu s vyššími limity. Pro uživatele v Evropském hospodářském prostoru platí podle podmínek Gemini API i na bezplatné kvótě pravidla placených služeb: Google obsah nepoužívá ke zlepšování svých produktů. Podmínky Gemini API dále vyžadují věk 18 a více let a uvádějí, že API je určeno pro profesionální nebo obchodní použití.
 
 **Návod krok za krokem se screenshoty:** https://zaciname-s-agenty.pprojects.cz
 
