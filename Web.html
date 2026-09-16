@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<title>Agent</title>
+<!--
+  =====================================================================
+   Web.html  |  Stránka agenta
+  =====================================================================
+
+   Autor: Pavel Horák ve spolupráci s Claude (Anthropic)  |  Verze 1.0, září 2026
+   Zdroj: github.com/pavel-horak-cz/zaciname-s-agenty-zdroje  |  Návod: zaciname-s-agenty.pprojects.cz
+
+   CO TENTO SOUBOR DĚLÁ
+   ---------------------
+   - Zobrazí komunikaci s agentem jako chat: tvoje příkazy a jeho odpovědi.
+   - Dole je vstupní pole a tlačítko odeslání. Hlas dodává mikrofon na
+     klávesnici telefonu (nebo diktovací rozšíření na PC).
+   - "Co agent smí": přepínače, které se ukládají v tomto prohlížeči
+     a posílají se skriptu s každým příkazem. Skript je vyhodnotí
+     před každou akcí.
+   - "Nastavení": cíl agenta, úroveň důvěry, model, tarif, interval, klíč.
+     Klíč se posílá jen do skriptu a v prohlížeči se neukládá.
+   - Historie komunikace se ukládá jen v tomto prohlížeči (localStorage).
+
+   CO TENTO SOUBOR NIKDY NEUDĚLÁ
+   ------------------------------
+   - Nevolá žádnou službu mimo Google (ani Gemini). To dělá výhradně skript.
+   - Nesahá na e-maily ani na Disk.
+   - Neposílá historii ani nastavení nikam jinam než do vašeho skriptu.
+  =====================================================================
+-->
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
+    --line: #dededa; --accent: #2d6a4f; --accent-text: #ffffff;
+    --me: #dcefe4; --agent: #ffffff; --danger: #b23a3a; --warn: #8a5a00; --warnbg: #fff4d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --panel: #202020; --text: #ececea; --muted: #a2a29c;
+      --line: #333331; --accent: #52b788; --accent-text: #0e1a14;
+      --me: #24382e; --agent: #262626; --danger: #e57373; --warn: #ffd27a; --warnbg: #3a2f14;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.4;
+    display: flex; flex-direction: column;
+  }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 14px; }
+  header .title { display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 1.15rem; margin: 0; }
+  header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 8px; }
+  details { border-top: 1px solid var(--line); margin-top: 8px; }
+  summary { cursor: pointer; padding: 10px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "▾"; color: var(--muted); }
+  details[open] summary::after { content: "▴"; }
+  .toggles label { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); gap: 12px; }
+  .toggles input[type=checkbox] { width: 22px; height: 22px; flex: none; }
+  .field { padding: 8px 0; border-top: 1px solid var(--line); }
+  .field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+  .field input[type=text], .field input[type=password], .field select, .field textarea {
+    width: 100%; font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--text);
+  }
+  .field textarea { min-height: 70px; resize: vertical; }
+  .hint { color: var(--muted); font-size: 0.8rem; padding: 6px 0 10px; }
+  .warn { background: var(--warnbg); color: var(--warn); border-radius: 8px; padding: 8px 10px; font-size: 0.82rem; margin: 6px 0; }
+  .muted { opacity: 0.55; }
+  button { font: inherit; border: 0; cursor: pointer; border-radius: 10px; padding: 10px 14px; min-height: 44px; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-accent { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0; }
+  main { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 85%; padding: 10px 12px; border-radius: 14px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.me { align-self: flex-end; background: var(--me); border-bottom-right-radius: 4px; }
+  .msg.agent { align-self: flex-start; background: var(--agent); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .msg .t { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 4px; }
+  .empty { color: var(--muted); text-align: center; margin: auto; font-size: 0.95rem; }
+  footer { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  .inputrow { display: flex; gap: 8px; align-items: flex-end; }
+  textarea#cmd { flex: 1; min-height: 46px; max-height: 140px; font: inherit; padding: 11px 12px; border: 1px solid var(--line); border-radius: 22px; background: var(--bg); color: var(--text); resize: none; }
+  .btn-send { width: 48px; height: 48px; min-height: 48px; padding: 0; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: 1.3rem; display: flex; align-items: center; justify-content: center; flex: none; }
+  .btn-send:disabled { opacity: 0.5; }
+  .status { color: var(--muted); font-size: 0.8rem; margin-top: 6px; min-height: 1.1em; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">
+    <h1><span class="dot"></span>Agent <span id="modeLabel" class="hint" style="padding:0;font-weight:400">na vyžádání</span></h1>
+    <span id="keyState" class="hint" style="padding:0">…</span>
+  </div>
+
+  <!-- Co agent smí -->
+  <details class="toggles">
+    <summary>Co agent smí</summary>
+    <label><span>Číst e-maily</span><input type="checkbox" id="canRead"></label>
+    <label><span>Označovat a přesouvat e-maily</span><input type="checkbox" id="canModify"></label>
+    <label><span>Ukládat do složky Agent na Disku</span><input type="checkbox" id="canDrive"></label>
+    <label><span>Jednat sám (Automat)</span><input type="checkbox" id="automat"></label>
+    <div id="automatState" class="hint"></div>
+    <div class="hint">Oprávnění k účtu jste dali jednou při instalaci. Tyto přepínače určují, co z toho agent smí použít. Automat má stejný rozsah jako příkazy na vyžádání, jen místo vás zadává příkaz váš cíl agenta.</div>
+  </details>
+
+  <!-- Nastavení -->
+  <details>
+    <summary>Nastavení</summary>
+
+    <div class="field">
+      <label for="level">Úroveň důvěry</label>
+      <select id="level">
+        <option value="1">1: agent jen radí, nic nemění</option>
+        <option value="2">2: koná pod dohledem (štítky, přesuny, koncepty)</option>
+        <option value="3">3: koná sám u bezpečných úloh</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="goal">Co má agent dělat (vlastními slovy)</label>
+      <textarea id="goal" placeholder="Např.: Tříď mi poštu. Faktury ukládej do složky Agent. Důležité věci mi shrň."></textarea>
+    </div>
+
+    <div class="field">
+      <label for="model">Model</label>
+      <select id="model">
+        <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (nejlevnější, výchozí)</option>
+        <option value="gemini-3.8-flash">Gemini 3.8 Flash (chytřejší, dražší)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="tier">Tarif u Googlu</label>
+      <select id="tier">
+        <option value="free">Zdarma (bez karty)</option>
+        <option value="paid">Placený (s kartou, soukromí)</option>
+      </select>
+      <div id="tierWarn" class="warn">Na bezplatném tarifu může Google obsah, který agent modelu pošle, použít ke zlepšování svých produktů. Za soukromí se platí jednotky korun měsíčně, přepněte na Placený a v AI Studiu zapněte fakturaci.</div>
+    </div>
+
+    <div class="field">
+      <label for="apiKey">Klíč k modelu (Gemini API)</label>
+      <input type="password" id="apiKey" placeholder="Vložte klíč a odešlete libovolný příkaz" autocomplete="off">
+      <div class="hint">Klíč získáte zdarma na aistudio.google.com (Get API key). Uloží se jen ve vašem skriptu, v prohlížeči nezůstane.</div>
+      <div class="actions">
+        <button id="clearKey" class="btn-ghost" type="button">Smazat uložený klíč</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="interval">Interval Automatu</label>
+      <select id="interval">
+        <option value="15">každých 15 minut</option>
+        <option value="30">každých 30 minut</option>
+        <option value="60" selected>každou hodinu</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <div class="actions">
+        <button id="clearHist" class="btn-danger" type="button">Smazat historii v tomto prohlížeči</button>
+        <a class="btn-ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Odebrat agentovi přístup (účet Google)</a>
+      </div>
+    </div>
+  </details>
+</header>
+
+<main id="chat"></main>
+
+<footer>
+  <div class="inputrow">
+    <textarea id="cmd" rows="1" placeholder="Co má agent udělat?"></textarea>
+    <button id="send" class="btn-send" type="button" title="Odeslat">➤</button>
+  </div>
+  <div id="status" class="status">Klepni do pole a použij mikrofon na klávesnici, nebo piš.</div>
+</footer>
+
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var chatEl = $('chat'), cmd = $('cmd'), sendBtn = $('send'), statusEl = $('status');
+
+  var HIST_KEY = 'agent_history_v1';
+  var SET_KEY = 'agent_settings_v1';
+  var HINT_KEY = 'agent_hint_seen';
+  var HIST_MAX = 100;
+
+  function setStatus(t) { statusEl.textContent = t; }
+
+  // ---------- Nastavení: localStorage <-> formulář ----------
+  var SETTING_IDS = { canRead: 'checkbox', canModify: 'checkbox', canDrive: 'checkbox', level: 'value', goal: 'value', model: 'value', tier: 'value', interval: 'value' };
+
+  function readSettingsFromForm() {
+    return {
+      canRead: $('canRead').checked,
+      canModify: $('canModify').checked,
+      canDrive: $('canDrive').checked,
+      automat: false,
+      level: Number($('level').value),
+      goal: $('goal').value,
+      model: $('model').value,
+      tier: $('tier').value,
+      interval: Number($('interval').value)
+    };
+  }
+  function saveSettings() {
+    try { localStorage.setItem(SET_KEY, JSON.stringify(readSettingsFromForm())); } catch (e) {}
+    $('tierWarn').style.display = $('tier').value === 'free' ? 'block' : 'none';
+    // Označovat a přesouvat vyžaduje čtení
+    if ($('canModify').checked && !$('canRead').checked) { $('canRead').checked = true; saveSettings(); }
+  }
+  function loadSettings() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(SET_KEY) || 'null'); } catch (e) {}
+    if (!s) { saveSettings(); return; }
+    Object.keys(SETTING_IDS).forEach(function (k) {
+      if (s[k] === undefined) return;
+      if (SETTING_IDS[k] === 'checkbox') $(k).checked = !!s[k]; else $(k).value = s[k];
+    });
+    // Pojistka: když si prohlížeč pamatuje model, který už v nabídce není, vrať výchozí
+    if ($('model').selectedIndex === -1) { $('model').selectedIndex = 0; saveSettings(); }
+    $('tierWarn').style.display = $('tier').value === 'free' ? 'block' : 'none';
+  }
+  Object.keys(SETTING_IDS).forEach(function (k) { $(k).addEventListener('change', saveSettings); });
+
+  // ---------- Automat ----------
+  function showAutomat(st) {
+    if (!st) return;
+    $('automat').checked = !!st.on;
+    var t = st.on ? 'Běží každých ' + st.interval + ' min.' : 'Vypnuto.';
+    if (st.lastRun) t += ' Poslední běh ' + st.lastRun + (st.lastResult ? ': ' + st.lastResult : '') + '.';
+    $('automatState').textContent = t;
+    $('modeLabel').textContent = st.on ? 'automat + na vyžádání' : 'na vyžádání';
+  }
+  function setAutomat(on) {
+    $('automat').disabled = true;
+    setStatus(on ? 'Zapínám Automat...' : 'Vypínám Automat...');
+    google.script.run
+      .withSuccessHandler(function (res) {
+        $('automat').disabled = false;
+        if (res && res.ok) { showAutomat(res.automat); setStatus(''); }
+        else { $('automat').checked = false; setStatus(res && res.message ? res.message : 'Automat se nepodařilo zapnout.'); }
+      })
+      .withFailureHandler(function (err) { $('automat').disabled = false; $('automat').checked = false; setStatus('Chyba: ' + (err && err.message ? err.message : err)); })
+      .setAutomat(on, readSettingsFromForm());
+  }
+  $('automat').addEventListener('change', function () { setAutomat($('automat').checked); });
+  // Změna intervalu při běžícím Automatu ho přenastaví
+  $('interval').addEventListener('change', function () { if ($('automat').checked) setAutomat(true); });
+
+  // ---------- Stav klíče ----------
+  function showKeyState(has) {
+    $('keyState').textContent = has ? 'klíč uložen' : 'bez klíče';
+    $('apiKey').placeholder = has ? 'Klíč je uložen. Nový vložte jen při výměně.' : 'Vložte klíč a odešlete libovolný příkaz';
+  }
+  $('clearKey').addEventListener('click', function () {
+    if (!confirm('Smazat uložený klíč ve skriptu?')) return;
+    google.script.run.withSuccessHandler(function () { showKeyState(false); setStatus('Klíč smazán.'); }).saveApiKey('');
+  });
+
+  // ---------- Historie = chat ----------
+  function loadHistory() { try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch (e) { return []; } }
+  function saveHistory(items) { try { localStorage.setItem(HIST_KEY, JSON.stringify(items.slice(-HIST_MAX))); } catch (e) { setStatus('Historii se nepodařilo uložit.'); } }
+  function addExchange(q, a) { var items = loadHistory(); items.push({ t: new Date().toLocaleString('cs-CZ'), q: q, a: a }); saveHistory(items); renderChat(); }
+  function bubble(cls, text, time) {
+    var d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text;
+    if (time) { var t = document.createElement('span'); t.className = 't'; t.textContent = time; d.appendChild(t); }
+    return d;
+  }
+  function renderChat() {
+    var items = loadHistory(); chatEl.innerHTML = '';
+    if (!items.length) { var e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Zatím žádná komunikace. Řekni agentovi, co má udělat.'; chatEl.appendChild(e); return; }
+    items.forEach(function (it) { chatEl.appendChild(bubble('me', it.q, it.t)); chatEl.appendChild(bubble('agent', it.a, '')); });
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+  $('clearHist').addEventListener('click', function () {
+    if (confirm('Smazat celou historii v tomto prohlížeči?')) { localStorage.removeItem(HIST_KEY); renderChat(); }
+  });
+
+  // ---------- Odeslání příkazu ----------
+  function send() {
+    var text = cmd.value.trim();
+    if (!text) { setStatus('Nejdřív něco řekni nebo napiš.'); return; }
+    var settings = readSettingsFromForm();
+    var newKey = $('apiKey').value.trim();
+    // Posledních pár výměn, aby agent rozuměl "ano", "jen tři", "ten první"
+    var recent = loadHistory().slice(-4).map(function (it) { return { q: it.q, a: String(it.a || '').slice(0, 600) }; });
+    sendBtn.disabled = true;
+    setStatus('Odesílám agentovi...');
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (res && res.ok) {
+          addExchange(text, res.message);
+          cmd.value = ''; autosize();
+          $('apiKey').value = '';
+          showKeyState(res.hasApiKey);
+          setStatus('');
+          try { localStorage.setItem(HINT_KEY, '1'); } catch (e) {}
+        } else {
+          setStatus(res && res.message ? res.message : 'Agent příkaz odmítl.');
+        }
+        sendBtn.disabled = false;
+      })
+      .withFailureHandler(function (err) { setStatus('Chyba: ' + (err && err.message ? err.message : err)); sendBtn.disabled = false; })
+      .handleCommand(text, settings, newKey, recent);
+  }
+  sendBtn.addEventListener('click', send);
+  cmd.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !isMobile()) { e.preventDefault(); send(); } });
+  function isMobile() { return /Android|iPhone|iPad/i.test(navigator.userAgent); }
+  function autosize() { cmd.style.height = 'auto'; cmd.style.height = Math.min(cmd.scrollHeight, 140) + 'px'; }
+  cmd.addEventListener('input', autosize);
+
+  // ---------- Start ----------
+  loadSettings();
+  renderChat();
+  try { if (localStorage.getItem(HINT_KEY)) setStatus(''); } catch (e) {}
+  google.script.run
+    .withSuccessHandler(function (st) {
+      showKeyState(st.hasApiKey);
+      showAutomat(st.automat);
+      if (!st.setupDone) setStatus('Instalace ještě neproběhla. Spusťte v Apps Scriptu funkci setup().');
+      else if (!st.logAvailable) setStatus('Tabulka Agent Log není dostupná. Spusťte znovu setup().');
+    })
+    .withFailureHandler(function () { $('keyState').textContent = ''; })
+    .getState();
+</script>
+</body>
+</html>
