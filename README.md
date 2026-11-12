@@ -4,7 +4,9 @@ Agent pro Gmail a Disk Google, který si obyčejný člověk s účtem gmail.com
 
 **Návod krok za krokem se screenshoty:** https://zaciname-s-agenty.pprojects.cz
 
-Autor: Pavel Horák ve spolupráci s Claude (Anthropic). Kód vznikl jako ukázka, že agent nemusí být drahý ani neprůhledný. Celý je na očích, česky komentovaný a záměrně bez knihoven, aby ho šlo vložit do libovolného LLM a zeptat se, co dělá.
+Autor: Pavel Horák ve spolupráci s Claude (Anthropic). Další projekty a pokusy: https://pprojects.cz
+
+Kód vznikl jako ukázka, že agent nemusí být drahý ani neprůhledný. Celý je na očích, česky komentovaný a záměrně bez knihoven, aby ho šlo vložit do libovolného LLM a zeptat se, co dělá.
 
 ## Co agent umí
 
@@ -18,7 +20,7 @@ Autor: Pavel Horák ve spolupráci s Claude (Anthropic). Kód vznikl jako ukázk
 - Nesáhne mimo složku Agent na Disku (technicky to ani nejde, má omezené oprávnění drive.file).
 - Nesáhne na e-mail, který nebyl v aktuální dávce (Doručená pošta za 24 hodin, max. 30 vláken).
 
-Seznam všeho, co smí, je v souboru `Whitelist.gs`. Přečtěte si ho jako první, má dvacet řádků.
+Seznam všeho, co smí, je v souboru `Whitelist.gs`. Přečtěte si ho jako první, pole WHITELIST má osm řádků.
 
 ## Soubory
 
@@ -58,6 +60,7 @@ Odpověď musí vyjít stejně, ať se ptáte kohokoliv. Kód je jen jeden.
 ## Verze
 
 - **v1.0** (září 2026): Gmail + Disk. Ověřeno na skutečném účtu, viz CHANGELOG.
+- **v1.0.1** (září 2026): oprava textů, kód beze změny.
 - **v2.0** (připravuje se): + Kalendář, Kontakty, Úkoly.
 
 Stahujte vždy konkrétní verzi z Releases, ne aktuální stav větve.
@@ -65,3 +68,10 @@ Stahujte vždy konkrétní verzi z Releases, ne aktuální stav větve.
 ## Licence
 
 MIT, viz LICENSE.
+
+## Autor
+
+Pavel Horák ve spolupráci s Claude (Anthropic).
+
+- Tento projekt v portfoliu: https://pprojects.cz/#zaciname-s-agenty
+- Další projekty, nástroje a pokusy: https://pprojects.cz
