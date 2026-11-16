@@ -73,5 +73,5 @@ MIT, viz LICENSE.
 
 Pavel Horák ve spolupráci s Claude (Anthropic).
 
-- Tento projekt v portfoliu: https://pprojects.cz/#zaciname-s-agenty
+- Tento projekt v portfoliu: https://pprojects.cz/projekty/zaciname-s-agenty/
 - Další projekty, nástroje a pokusy: https://pprojects.cz
